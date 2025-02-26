@@ -9,6 +9,7 @@ class AttendancePageState {
   String location = 'Unknown';
   File? image;
   bool hasCheckedIn = false;
+  bool isLoading = false;
 
   Future<void> getCurrentLocation(
     void Function(void Function()) setState,
@@ -50,7 +51,9 @@ class AttendancePageState {
     String? userId,
     void Function(void Function()) setState,
   ) async {
-    if (userId == null) return;
+    if (userId == null) {
+      return;
+    }
 
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -62,12 +65,17 @@ class AttendancePageState {
             .eq('user_id', userId)
             .gte('check_in_time', today.toIso8601String())
             .lt('check_in_time', today.add(Duration(days: 1)).toIso8601String())
+            .eq(
+              'check_out_time',
+              null as dynamic,
+            ) // Use eq with null as dynamic
             .order('check_in_time', ascending: false)
             .limit(1)
             .single();
 
     setState(() {
       hasCheckedIn = existingAttendance != null;
+      isLoading = false;
     });
   }
 
@@ -79,6 +87,9 @@ class AttendancePageState {
     BuildContext context,
     void Function(void Function()) setState,
   ) async {
+    setState(() {
+      isLoading = true;
+    });
     try {
       if (userId == null) return;
 
@@ -141,6 +152,9 @@ class AttendancePageState {
             ),
       );
     } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
       showDialog(
         context: context,
         builder:
@@ -155,6 +169,10 @@ class AttendancePageState {
               ],
             ),
       );
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
     }
   }
 

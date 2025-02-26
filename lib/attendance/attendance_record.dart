@@ -1,13 +1,13 @@
 class AttendanceRecord {
-  final DateTime? timeIn;
-  final DateTime? timeOut;
+  final DateTime? checkInTime;
+  final DateTime? checkOutTime;
 
-  AttendanceRecord({this.timeIn, this.timeOut});
+  AttendanceRecord({this.checkInTime, this.checkOutTime});
 
   factory AttendanceRecord.fromJson(Map<String, dynamic> json) {
     return AttendanceRecord(
-      timeIn: DateTime.tryParse(json['time_in'] ?? ''),
-      timeOut: DateTime.tryParse(json['time_out'] ?? ''),
+      checkInTime: DateTime.tryParse(json['check_in_time'] ?? ''),
+      checkOutTime: DateTime.tryParse(json['check_out_time'] ?? ''),
     );
   }
 }

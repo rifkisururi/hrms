@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../attendance_history_page.dart';
+import 'package:hrms/attendance/attendance_history_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../config.dart';
 import 'attendance_page_state.dart'; // Import the new file
@@ -216,38 +216,69 @@ class _AttendancePageState extends State<AttendancePage> {
               ),
             ),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed:
-                  _attendancePageState.hasCheckedIn
-                      ? null
-                      : () => _submitAttendance('Masuk'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(AppColors.primaryColor),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+            Visibility(
+              visible: !_attendancePageState.hasCheckedIn,
+              child: SizedBox(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: <Widget>[
+                    ElevatedButton(
+                      onPressed:
+                          _attendancePageState.hasCheckedIn
+                              ? null
+                              : () => _submitAttendance('Masuk'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(AppColors.primaryColor),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        textStyle: const TextStyle(fontSize: 18),
+                      ),
+                      child: const Text(
+                        'Masuk',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    Visibility(
+                      visible: _attendancePageState.isLoading,
+                      child: const CircularProgressIndicator(),
+                    ),
+                  ],
                 ),
-                textStyle: const TextStyle(fontSize: 18),
               ),
-              child: const Text('Masuk', style: TextStyle(color: Colors.white)),
             ),
             const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed:
-                  !_attendancePageState.hasCheckedIn
-                      ? null
-                      : () => _submitAttendance('Pulang'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(AppColors.primaryColor),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
+            Visibility(
+              visible: _attendancePageState.hasCheckedIn,
+              child: SizedBox(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    ElevatedButton(
+                      onPressed:
+                          !_attendancePageState.hasCheckedIn
+                              ? null
+                              : () => _submitAttendance('Pulang'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(AppColors.primaryColor),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 16,
+                        ),
+                        textStyle: const TextStyle(fontSize: 18),
+                      ),
+                      child: const Text(
+                        'Pulang',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                    Visibility(
+                      visible: _attendancePageState.isLoading,
+                      child: const CircularProgressIndicator(),
+                    ),
+                  ],
                 ),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-              child: const Text(
-                'Pulang',
-                style: TextStyle(color: Colors.white),
               ),
             ),
           ],
