@@ -6,8 +6,10 @@ import 'package:hrms/config.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+const String attendanceHistoryRouteName = '/attendance_history';
+
 class AttendanceHistoryPage extends StatefulWidget {
-  const AttendanceHistoryPage({Key? key}) : super(key: key);
+  const AttendanceHistoryPage({super.key});
 
   @override
   State<AttendanceHistoryPage> createState() => _AttendanceHistoryPageState();
@@ -18,6 +20,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   int _offset = 0;
   final int _limit = 5;
   bool _isLoading = false;
+  bool _hasMoreData = true;
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -51,6 +54,8 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Future<void> _loadMoreData() async {
+    if (_isLoading || !_hasMoreData) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -62,6 +67,9 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
   }
 
   Future<void> _fetchAttendanceData() async {
+    setState(() {
+      _isLoading = true;
+    });
     final supabase = Supabase.instance.client;
     final user = supabase.auth.currentUser;
 
@@ -85,6 +93,7 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         attendanceRecords.addAll(
           data.map((e) => AttendanceRecord.fromJson(e)).toList(),
         );
+        _hasMoreData = data.length == _limit;
       });
     } catch (error) {
       print('Error fetching attendance data: $error');
@@ -94,36 +103,64 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
         print('Postgrest error details: ${error.details}');
         print('Postgrest error hint: ${error.hint}');
       }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Attendance History')),
-      body: ListView.builder(
-        controller: _scrollController,
-        padding: const EdgeInsets.all(16),
-        itemCount: attendanceRecords.length + (_isLoading ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index < attendanceRecords.length) {
-            final record = attendanceRecords[index];
-            return Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    _buildTimeRow('Date & Time In', record.checkInTime),
-                    const SizedBox(height: 8),
-                    _buildTimeRow('Date & Time Out', record.checkOutTime),
-                  ],
-                ),
+      appBar: AppBar(
+        backgroundColor: Color(AppColors.primaryColor),
+        title: const Text(
+          'Attendance History',
+          style: TextStyle(color: Colors.white),
+        ),
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      backgroundColor: Color(AppColors.backgroundColor),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: attendanceRecords.length,
+              itemBuilder: (context, index) {
+                final record = attendanceRecords[index];
+                return Card(
+                  elevation: 3,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      children: [
+                        _buildTimeRow('Date & Time In', record.checkInTime),
+                        const SizedBox(height: 8),
+                        _buildTimeRow('Date & Time Out', record.checkOutTime),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (_hasMoreData && !_isLoading)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: ElevatedButton(
+                onPressed: _loadMoreData,
+                child: const Text('Load More'),
               ),
-            );
-          } else {
-            return const Center(child: CircularProgressIndicator());
-          }
-        },
+            ),
+          if (_isLoading)
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+        ],
       ),
     );
   }
@@ -132,8 +169,17 @@ class _AttendanceHistoryPageState extends State<AttendanceHistoryPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
-        Text(time != null ? "${time.toLocal()}".split('.')[0] : 'N/A'),
+        Text(
+          label,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(AppColors.textColor),
+          ),
+        ),
+        Text(
+          time != null ? "${time.toLocal()}".split('.')[0] : 'N/A',
+          style: TextStyle(color: Color(AppColors.textColor)),
+        ),
       ],
     );
   }

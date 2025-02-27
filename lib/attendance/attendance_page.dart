@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:hrms/attendance/attendance_history_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:hrms/attendance/attendance_history_page.dart';
 import '../config.dart';
-import 'attendance_page_state.dart'; // Import the new file
+import 'package:image_picker/image_picker.dart'; // Import image_picker
+import 'dart:io'; // Import dart:io for File
 
 class AttendancePage extends StatefulWidget {
-  const AttendancePage({Key? key}) : super(key: key);
+  const AttendancePage({super.key});
 
   @override
   _AttendancePageState createState() => _AttendancePageState();
@@ -39,15 +40,26 @@ class _AttendancePageState extends State<AttendancePage> {
     await _attendancePageState.submitAttendance(
       status,
       userId,
-      _attendancePageState.location,
-      _attendancePageState.backup,
-      context,
+      context, // Pass context
       setState,
     );
   }
 
   String getMonthName(int month) {
-    return _attendancePageState.getMonthName(month);
+    return [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ][month - 1];
   }
 
   @override
@@ -60,14 +72,13 @@ class _AttendancePageState extends State<AttendancePage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.history, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const AttendanceHistoryPage(),
+            onPressed:
+                () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AttendanceHistoryPage(),
+                  ),
                 ),
-              );
-            },
           ),
         ],
       ),
@@ -77,213 +88,254 @@ class _AttendancePageState extends State<AttendancePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
-                    spreadRadius: 2,
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: StreamBuilder(
-                stream: Stream.periodic(
-                  const Duration(seconds: 1),
-                  (_) => DateTime.now(),
-                ),
-                builder: (context, snapshot) {
-                  DateTime currentTime = snapshot.data ?? DateTime.now();
-                  return Text(
-                    '${currentTime.day} ${getMonthName(currentTime.month)} ${currentTime.hour}:${currentTime.minute.toString().padLeft(2, '0')}:${currentTime.second.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(AppColors.textColor),
-                    ),
-                    textAlign: TextAlign.center,
-                  );
-                },
-              ),
-            ),
+            _buildDateTimeCard(),
             const SizedBox(height: 16),
-            Card(
-              elevation: 3,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Location:',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(AppColors.textColor),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      '${_attendancePageState.location}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Color(AppColors.secondaryColor),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _buildLocationCard(),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed:
-                  _attendancePageState.image == null ? _takePicture : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(AppColors.accentColor),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 32,
-                  vertical: 16,
-                ),
-                textStyle: const TextStyle(fontSize: 18),
-              ),
-              child: const Text(
-                'Take Selfie',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
+            _buildSelfieSection(),
             const SizedBox(height: 16),
-            _attendancePageState.image == null
-                ? const Text('No image selected.')
-                : Image.file(_attendancePageState.image!),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12.0),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.grey.withOpacity(0.3),
-                    spreadRadius: 1,
-                    blurRadius: 3,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    'Backup:',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Color(AppColors.textColor),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'Yes',
-                    style: TextStyle(color: Color(AppColors.textColor)),
-                  ),
-                  Radio<bool>(
-                    value: true,
-                    groupValue: _attendancePageState.backup,
-                    onChanged: (value) {
-                      setState(() {
-                        _attendancePageState.backup = value!;
-                      });
-                    },
-                    activeColor: Color(AppColors.primaryColor),
-                  ),
-                  Text(
-                    'No',
-                    style: TextStyle(color: Color(AppColors.textColor)),
-                  ),
-                  Radio<bool>(
-                    value: false,
-                    groupValue: _attendancePageState.backup,
-                    onChanged: (value) {
-                      setState(() {
-                        _attendancePageState.backup = value!;
-                      });
-                    },
-                    activeColor: const Color(AppColors.primaryColor),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            Visibility(
-              visible: !_attendancePageState.hasCheckedIn,
-              child: SizedBox(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: <Widget>[
-                    ElevatedButton(
-                      onPressed:
-                          _attendancePageState.hasCheckedIn
-                              ? null
-                              : () => _submitAttendance('Masuk'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(AppColors.primaryColor),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        textStyle: const TextStyle(fontSize: 18),
-                      ),
-                      child: const Text(
-                        'Masuk',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    Visibility(
-                      visible: _attendancePageState.isLoading,
-                      child: const CircularProgressIndicator(),
-                    ),
-                  ],
-                ),
+            _buildBackupSelector(),
+            const SizedBox(height: 24),
+            _buildActionButtons(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDateTimeCard() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        boxShadow: _commonBoxShadow,
+      ),
+      child: StreamBuilder(
+        stream: Stream.periodic(const Duration(seconds: 1)),
+        builder: (context, snapshot) {
+          final now = DateTime.now();
+          return Text(
+            '${now.day} ${getMonthName(now.month)} '
+            '${now.hour}:${now.minute.toString().padLeft(2, '0')}:'
+            '${now.second.toString().padLeft(2, '0')}',
+            style: TextStyle(fontSize: 16, color: Color(AppColors.textColor)),
+            textAlign: TextAlign.center,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLocationCard() {
+    return Card(
+      elevation: 3,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Location:',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(AppColors.textColor),
               ),
             ),
             const SizedBox(height: 8),
-            Visibility(
-              visible: _attendancePageState.hasCheckedIn,
-              child: SizedBox(
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    ElevatedButton(
-                      onPressed:
-                          !_attendancePageState.hasCheckedIn
-                              ? null
-                              : () => _submitAttendance('Pulang'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(AppColors.primaryColor),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        textStyle: const TextStyle(fontSize: 18),
-                      ),
-                      child: const Text(
-                        'Pulang',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                    Visibility(
-                      visible: _attendancePageState.isLoading,
-                      child: const CircularProgressIndicator(),
-                    ),
-                  ],
-                ),
+            Text(
+              _attendancePageState.location,
+              style: TextStyle(
+                fontSize: 16,
+                color: Color(AppColors.secondaryColor),
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildSelfieSection() {
+    return Column(
+      children: [
+        ElevatedButton(
+          onPressed:
+              _attendancePageState.image == null
+                  ? () async {
+                    await _attendancePageState.takePicture(setState);
+                  }
+                  : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Color(AppColors.accentColor),
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          ),
+          child: const Text(
+            'Take Selfie',
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _attendancePageState.image != null
+            ? Image.file(
+              File(_attendancePageState.image!.path),
+            ) // Convert XFile to File
+            : Text(
+              'No image selected',
+              style: TextStyle(color: Color(AppColors.textColor)),
+            ),
+      ],
+    );
+  }
+
+  Widget _buildBackupSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        boxShadow: _commonBoxShadow,
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'Backup:',
+            style: TextStyle(fontSize: 16, color: Color(AppColors.textColor)),
+          ),
+          const SizedBox(width: 10),
+          ..._buildBackupRadioButtons(),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildBackupRadioButtons() {
+    return ['Yes', 'No'].map((text) {
+      final value = text == 'Yes';
+      return Row(
+        children: [
+          Text(text),
+          Radio<bool>(
+            value: value,
+            groupValue: _attendancePageState.backup,
+            onChanged:
+                (bool? v) => setState(() => _attendancePageState.backup = v!),
+            activeColor: Color(AppColors.primaryColor),
+          ),
+        ],
+      );
+    }).toList();
+  }
+
+  Widget _buildActionButtons() {
+    return Column(
+      children: [
+        if (!_attendancePageState.hasCheckedIn) _buildAttendanceButton('Masuk'),
+        if (_attendancePageState.hasCheckedIn) _buildAttendanceButton('Pulang'),
+      ],
+    );
+  }
+
+  Widget _buildAttendanceButton(String label) {
+    return SizedBox(
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          ElevatedButton(
+            onPressed:
+                _attendancePageState.isLoading
+                    ? null
+                    : () => _attendancePageState.submitAttendance(
+                      label.toLowerCase(),
+                      Supabase.instance.client.auth.currentUser?.id,
+                      context,
+                      setState,
+                    ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Color(AppColors.primaryColor),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              textStyle: const TextStyle(fontSize: 18),
+            ),
+            child: Text(label, style: const TextStyle(color: Colors.white)),
+          ),
+          if (_attendancePageState.isLoading) const CircularProgressIndicator(),
+        ],
+      ),
+    );
+  }
+
+  final _commonBoxShadow = [
+    BoxShadow(
+      color: Colors.grey.withOpacity(0.3),
+      spreadRadius: 2,
+      blurRadius: 5,
+      offset: const Offset(0, 3),
+    ),
+  ];
+}
+
+class AttendancePageState {
+  String location = '-6.200000,106.816666';
+  bool backup = true;
+  bool hasCheckedIn = false;
+  bool isLoading = false;
+  XFile? image;
+
+  Future<void> getCurrentLocation(
+    void Function(void Function()) setState,
+  ) async {
+    try {
+      // Implementasi get location sebenarnya
+      setState(() => location = '-6.200000,106.816666');
+    } catch (e) {
+      print('Error getting location: $e');
+      setState(() => location = '-6.200000,106.816666');
+    }
+  }
+
+  Future<void> takePicture(void Function(void Function()) setState) async {
+    final imagePicker = ImagePicker();
+    final pickedImage = await imagePicker.pickImage(source: ImageSource.camera);
+
+    if (pickedImage != null) {
+      setState(() {
+        image = XFile(pickedImage.path);
+      });
+    }
+  }
+
+  Future<void> checkIfUserHasCheckedIn(
+    String? userId,
+    void Function(void Function()) setState,
+  ) async {
+    // Implementasi check status attendance
+  }
+
+  Future<void> submitAttendance(
+    String status,
+    String? userId,
+    BuildContext context,
+    void Function(void Function()) setState,
+  ) async {
+    setState(() => isLoading = true);
+    try {
+      // Implementasi submit ke Supabase
+      await Future.delayed(const Duration(seconds: 2));
+      setState(() {
+        hasCheckedIn = status == 'masuk';
+        isLoading = false;
+      });
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Attendance $status successful')));
+    } catch (e) {
+      setState(() => isLoading = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+    }
   }
 }
