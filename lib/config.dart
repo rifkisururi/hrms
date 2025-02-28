@@ -6,9 +6,9 @@ const attendanceUrl =
 const attendanceHistoryUrl = 'https://webhook-test.com/attendance_history';
 
 class AppColors {
-  static const primaryColor = 0xFF007BFF;
-  static const secondaryColor = 0xFF6C757D;
-  static const accentColor = 0xFF28A745;
-  static const backgroundColor = 0xFFF8F9FA;
-  static const textColor = 0xFF343A40;
+  static const primaryColor = 0xFF1A2E55; // Dark blue from Mega Darmayudha
+  static const secondaryColor = 0xFFD4AF37; // Gold accent
+  static const accentColor = 0xFFC0A062; // Secondary gold
+  static const backgroundColor = 0xFFFFFFFF; // White background
+  static const textColor = 0xFF2A2A2A; // Darker text for contrast
 }

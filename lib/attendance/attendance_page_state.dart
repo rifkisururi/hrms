@@ -122,16 +122,11 @@ class AttendancePageState {
 
         data['check_out_time'] = now.toIso8601String();
 
-        if (existingAttendance != null) {
-          // Update the existing record
-          await Supabase.instance.client
-              .from('attendances')
-              .update(data)
-              .eq('id', existingAttendance['id']);
-        } else {
-          // Create a new record (this should rarely happen)
-          await Supabase.instance.client.from('attendances').insert(data);
-        }
+        // Update the existing record
+        await Supabase.instance.client
+            .from('attendances')
+            .update(data)
+            .eq('id', existingAttendance['id']);
         setState(() {
           hasCheckedIn = false; // Update state after check-out
         });

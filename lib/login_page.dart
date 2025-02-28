@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'config.dart';
+import 'package:geolocator/geolocator.dart';
+import 'config.dart' show supabaseUrl, supabaseKey;
 import 'home_page.dart';
+
+void initializeSupabase() {
+  Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+}
+
+final supabase = Supabase.instance.client;
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -61,18 +67,45 @@ class _LoginPageState extends State<LoginPage>
   Future<void> _signIn() async {
     _animationController.forward();
     setState(() => _isLoading = true);
+
+    // Request location permissions
+    final locationPermission = await Geolocator.checkPermission();
+    if (locationPermission == LocationPermission.denied) {
+      await Geolocator.requestPermission();
+    }
+
     try {
-      await Supabase.instance.client.auth.signInWithPassword(
+      final AuthResponse response = await supabase.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('isLoggedIn', true);
-      Navigator.of(context).pushReplacementNamed('/home');
-    } catch (error) {
+
+      if (response.session?.accessToken == null) {
+        throw AuthException('Login failed - no session token received');
+      }
+
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    } on AuthException catch (e) {
+      String message = 'Login failed: ';
+      switch (e.message) {
+        case 'Invalid login credentials':
+          message += 'Email or password is incorrect';
+          break;
+        case 'Email not confirmed':
+          message += 'Please verify your email first';
+          break;
+        default:
+          message += e.message;
+      }
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error.toString())));
+      ).showSnackBar(SnackBar(content: Text(message)));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Network error: ${e.toString()}')));
     } finally {
       setState(() {
         _isLoading = false;

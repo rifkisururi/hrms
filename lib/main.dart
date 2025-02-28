@@ -9,12 +9,17 @@ import 'home_page.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseKey);
+  await Supabase.initialize(
+    url: supabaseUrl,
+    anonKey: supabaseKey,
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
+  );
 
-  final prefs = await SharedPreferences.getInstance();
-  final bool? isLoggedIn = prefs.getBool('isLoggedIn');
+  final session = Supabase.instance.client.auth.currentSession;
 
-  runApp(MyApp(initialRoute: isLoggedIn == true ? '/home' : '/login'));
+  runApp(MyApp(initialRoute: session != null ? '/home' : '/login'));
 }
 
 class MyApp extends StatelessWidget {
