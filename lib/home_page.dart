@@ -4,6 +4,7 @@ import 'package:animate_do/animate_do.dart'; // Import animate_do package
 import 'attendance/attendance_page.dart';
 import 'login_page.dart';
 import 'config.dart';
+import 'workshift_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -100,7 +101,11 @@ class _HomePageState extends State<HomePage> {
                           'Workshift',
                           Color(AppColors.secondaryColor),
                           () {
-                            // TODO: Implement Workshift functionality
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const WorkshiftPage(),
+                              ),
+                            );
                           },
                         ),
                       ],
