@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:animate_do/animate_do.dart'; // Import animate_do package
-import 'attendance/attendance_page.dart';
-import 'login_page.dart';
 import 'config.dart';
 import 'workshift_page.dart';
 
@@ -86,13 +84,9 @@ class _HomePageState extends State<HomePage> {
                           context,
                           Icons.fingerprint,
                           'Attendance',
-                          Color(AppColors.accentColor),
+                          Color(AppColors.primaryColor),
                           () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const AttendancePage(),
-                              ),
-                            );
+                            Navigator.of(context).pushNamed('/attendance');
                           },
                         ),
                         _buildIconButton(

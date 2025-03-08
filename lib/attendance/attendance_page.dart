@@ -1,344 +1,225 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
-import 'package:latlong2/latlong.dart';
-import 'package:hrms/attendance/attendance_history_page.dart';
-import '../config.dart';
-import 'package:image_picker/image_picker.dart'; // Import image_picker
-import 'dart:io'; // Import dart:io for File
+import 'dart:io';
 
 class AttendancePage extends StatefulWidget {
-  const AttendancePage({super.key});
+  const AttendancePage({Key? key}) : super(key: key);
 
   @override
-  _AttendancePageState createState() => _AttendancePageState();
+  State<AttendancePage> createState() => _AttendancePageState();
 }
 
 class _AttendancePageState extends State<AttendancePage> {
-  final _attendancePageState = AttendancePageState();
+  String? _location;
+  File? _image;
+  bool _isBackup = false;
+  bool _isCheckedIn = false;
+  DateTime? _checkInTime;
+  DateTime? _checkOutTime;
 
   @override
   void initState() {
     super.initState();
     _getCurrentLocation();
-    _checkIfUserHasCheckedIn();
   }
 
   Future<void> _getCurrentLocation() async {
-    await _attendancePageState.getCurrentLocation(setState);
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+      setState(() {
+        _location =
+            "Latitude: ${position.latitude}, Longitude: ${position.longitude}";
+      });
+    } catch (e) {
+      setState(() {
+        _location = "Error getting location: ${e.toString()}";
+      });
+    }
   }
 
-  Future<void> _takePicture() async {
-    await _attendancePageState.takePicture(setState);
+  Future<void> _getImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.camera);
+
+    if (image != null) {
+      setState(() {
+        _image = File(image.path);
+      });
+    }
   }
 
-  Future<void> _checkIfUserHasCheckedIn() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    await _attendancePageState.checkIfUserHasCheckedIn(userId, setState);
+  Future<void> _checkIn() async {
+    if (_isCheckedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You have already checked in. Please check out first.'),
+        ),
+      );
+      return;
+    }
+
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to check in.')),
+        );
+        return;
+      }
+
+      await supabase.from('attendances').insert({
+        'user_id': user.id,
+        'location': _location,
+        'backup': _isBackup,
+        'check_in_time': DateTime.now().toIso8601String(),
+        'check_out_time': null,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      setState(() {
+        _isCheckedIn = true;
+        _checkInTime = DateTime.now();
+        _checkOutTime = null;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Check-in successful!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Check-in failed: ${e.toString()}')),
+      );
+    }
   }
 
-  Future<void> _submitAttendance(String status) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
-    await _attendancePageState.submitAttendance(
-      status,
-      userId,
-      context, // Pass context
-      setState,
-    );
-  }
+  Future<void> _checkOut() async {
+    if (!_isCheckedIn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You have not checked in yet.')),
+      );
+      return;
+    }
 
-  String getMonthName(int month) {
-    return [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ][month - 1];
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You must be logged in to check out.')),
+        );
+        return;
+      }
+
+      // Assuming you have a way to identify the correct attendance record
+      // For example, you might store the attendance ID when checking in
+      // Here, I'm assuming you only have one active attendance record
+      final List<dynamic> attendanceList = await supabase
+          .from('attendances')
+          .select()
+          .eq('user_id', user.id);
+
+      if (attendanceList.isNotEmpty) {
+        final attendance = attendanceList.first;
+        if (attendance['id'] != null) {
+          await supabase
+              .from('attendances')
+              .update({'check_out_time': DateTime.now().toIso8601String()})
+              .eq('id', attendance['id'].toString());
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Attendance record has a null ID.')),
+          );
+          return;
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No active attendance record found.')),
+        );
+        return;
+      }
+
+      setState(() {
+        _isCheckedIn = false;
+        _checkOutTime = DateTime.now();
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Check-out successful!')));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Check-out failed: ${e.toString()}')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Color(AppColors.primaryColor),
-        title: const Text('Attendance', style: TextStyle(color: Colors.white)),
-        iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history, color: Colors.white),
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AttendanceHistoryPage(),
-                  ),
-                ),
-          ),
-        ],
-      ),
-      backgroundColor: Color(AppColors.backgroundColor),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildDateTimeCard(),
-            const SizedBox(height: 16),
-            _buildLocationCard(),
-            const SizedBox(height: 16),
-            _buildSelfieSection(),
-            const SizedBox(height: 16),
-            _buildBackupSelector(),
-            const SizedBox(height: 24),
-            _buildActionButtons(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDateTimeCard() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.0),
-        boxShadow: _commonBoxShadow,
-      ),
-      child: StreamBuilder(
-        stream: Stream.periodic(const Duration(seconds: 1)),
-        builder: (context, snapshot) {
-          final now = DateTime.now();
-          return Text(
-            '${now.day} ${getMonthName(now.month)} '
-            '${now.hour}:${now.minute.toString().padLeft(2, '0')}:'
-            '${now.second.toString().padLeft(2, '0')}',
-            style: TextStyle(fontSize: 16, color: Color(AppColors.textColor)),
-            textAlign: TextAlign.center,
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildLocationCard() {
-    return Card(
-      elevation: 3,
-      child: Padding(
+      appBar: AppBar(title: const Text('Attendance')),
+      body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Location:',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(AppColors.textColor),
+            TextFormField(
+              decoration: const InputDecoration(
+                labelText: 'Location',
+                border: OutlineInputBorder(),
               ),
+              readOnly: true,
+              controller: TextEditingController(text: _location),
             ),
-            const SizedBox(height: 8),
-            Text(
-              _attendancePageState.location,
-              style: TextStyle(
-                fontSize: 16,
-                color: Color(AppColors.secondaryColor),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _getImage,
+              child: const Text('Upload Selfie'),
+            ),
+            if (_image != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Image.file(_image!, height: 100),
               ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Text('Is Backup:'),
+                const SizedBox(width: 16),
+                Checkbox(
+                  value: _isBackup,
+                  onChanged: (value) {
+                    setState(() {
+                      _isBackup = value!;
+                    });
+                  },
+                ),
+              ],
             ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _isCheckedIn ? null : _checkIn,
+              child: const Text('Check In'),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: !_isCheckedIn ? null : _checkOut,
+              child: const Text('Check Out'),
+            ),
+            const SizedBox(height: 16),
+            if (_checkInTime != null)
+              Text('Check In Time: ${_checkInTime.toString()}'),
+            if (_checkOutTime != null)
+              Text('Check Out Time: ${_checkOutTime.toString()}'),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildSelfieSection() {
-    return Column(
-      children: [
-        ElevatedButton(
-          onPressed:
-              _attendancePageState.image == null
-                  ? () async {
-                    await _attendancePageState.takePicture(setState);
-                  }
-                  : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(AppColors.accentColor),
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-          ),
-          child: const Text(
-            'Take Selfie',
-            style: TextStyle(color: Colors.white, fontSize: 18),
-          ),
-        ),
-        const SizedBox(height: 16),
-        _attendancePageState.image != null
-            ? Image.file(
-              File(_attendancePageState.image!.path),
-            ) // Convert XFile to File
-            : Text(
-              'No image selected',
-              style: TextStyle(color: Color(AppColors.textColor)),
-            ),
-      ],
-    );
-  }
-
-  Widget _buildBackupSelector() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8.0),
-        boxShadow: _commonBoxShadow,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Backup:',
-            style: TextStyle(fontSize: 16, color: Color(AppColors.textColor)),
-          ),
-          const SizedBox(width: 10),
-          ..._buildBackupRadioButtons(),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildBackupRadioButtons() {
-    return ['Yes', 'No'].map((text) {
-      final value = text == 'Yes';
-      return Row(
-        children: [
-          Text(text),
-          Radio<bool>(
-            value: value,
-            groupValue: _attendancePageState.backup,
-            onChanged:
-                (bool? v) => setState(() => _attendancePageState.backup = v!),
-            activeColor: Color(AppColors.primaryColor),
-          ),
-        ],
-      );
-    }).toList();
-  }
-
-  Widget _buildActionButtons() {
-    return Column(
-      children: [
-        if (!_attendancePageState.hasCheckedIn) _buildAttendanceButton('Masuk'),
-        if (_attendancePageState.hasCheckedIn) _buildAttendanceButton('Pulang'),
-      ],
-    );
-  }
-
-  Widget _buildAttendanceButton(String label) {
-    return SizedBox(
-      width: double.infinity,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          ElevatedButton(
-            onPressed:
-                _attendancePageState.isLoading
-                    ? null
-                    : () => _attendancePageState.submitAttendance(
-                      label.toLowerCase(),
-                      Supabase.instance.client.auth.currentUser?.id,
-                      context,
-                      setState,
-                    ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(AppColors.primaryColor),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              textStyle: const TextStyle(fontSize: 18),
-            ),
-            child: Text(label, style: const TextStyle(color: Colors.white)),
-          ),
-          if (_attendancePageState.isLoading) const CircularProgressIndicator(),
-        ],
-      ),
-    );
-  }
-
-  final _commonBoxShadow = [
-    BoxShadow(
-      color: Colors.grey.withOpacity(0.3),
-      spreadRadius: 2,
-      blurRadius: 5,
-      offset: const Offset(0, 3),
-    ),
-  ];
-}
-
-class AttendancePageState {
-  String location = '-6.200000,106.816666';
-  bool backup = true;
-  bool hasCheckedIn = false;
-  bool isLoading = false;
-  XFile? image;
-
-  Future<void> getCurrentLocation(
-    void Function(void Function()) setState,
-  ) async {
-    try {
-      // Implementasi get location sebenarnya
-      setState(() => location = '-6.200000,106.816666');
-    } catch (e) {
-      print('Error getting location: $e');
-      setState(() => location = '-6.200000,106.816666');
-    }
-  }
-
-  Future<void> takePicture(void Function(void Function()) setState) async {
-    final imagePicker = ImagePicker();
-    final pickedImage = await imagePicker.pickImage(source: ImageSource.camera);
-
-    if (pickedImage != null) {
-      setState(() {
-        image = XFile(pickedImage.path);
-      });
-    }
-  }
-
-  Future<void> checkIfUserHasCheckedIn(
-    String? userId,
-    void Function(void Function()) setState,
-  ) async {
-    // Implementasi check status attendance
-  }
-
-  Future<void> submitAttendance(
-    String status,
-    String? userId,
-    BuildContext context,
-    void Function(void Function()) setState,
-  ) async {
-    setState(() => isLoading = true);
-    try {
-      // Implementasi submit ke Supabase
-      await Future.delayed(const Duration(seconds: 2));
-      setState(() {
-        hasCheckedIn = status == 'masuk';
-        isLoading = false;
-      });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Attendance $status successful')));
-    } catch (e) {
-      setState(() => isLoading = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
-    }
   }
 }

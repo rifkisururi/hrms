@@ -1,9 +1,6 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:hrms/attendance/attendance_record.dart';
 import 'package:hrms/config.dart';
-import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 const String attendanceHistoryRouteName = '/attendance_history';
