@@ -76,7 +76,7 @@ class _AttendancePageState extends State<AttendancePage> {
 
       await supabase.from('attendances').insert({
         'user_id': user.id,
-        'location': _location,
+        'location_checkin': _location,
         'backup': _isBackup,
         'check_in_time': DateTime.now().toIso8601String(),
         'check_out_time': null,
@@ -131,7 +131,10 @@ class _AttendancePageState extends State<AttendancePage> {
         if (attendance['id'] != null) {
           await supabase
               .from('attendances')
-              .update({'check_out_time': DateTime.now().toIso8601String()})
+              .update({
+                'check_out_time': DateTime.now().toIso8601String(),
+                'location_checkout': _location,
+              })
               .eq('id', attendance['id'].toString());
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
