@@ -23,6 +23,7 @@ class _AttendancePageState extends State<AttendancePage> {
   void initState() {
     super.initState();
     _getCurrentLocation();
+    _getLastAttendanceRecord();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -156,6 +157,59 @@ class _AttendancePageState extends State<AttendancePage> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Check-out failed: ${e.toString()}')),
+      );
+    }
+  }
+
+  Future<void> _getLastAttendanceRecord() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        // User is not logged in, or session expired
+        setState(() {
+          _isCheckedIn = false;
+          _checkInTime = null;
+          _checkOutTime = null;
+        });
+        return;
+      }
+
+      final List<dynamic> attendanceList = await supabase
+          .from('attendances')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      if (attendanceList.isNotEmpty) {
+        final attendance = attendanceList.first;
+        final checkInTime =
+            attendance['check_in_time'] != null
+                ? DateTime.parse(attendance['check_in_time'])
+                : null;
+        final checkOutTime =
+            attendance['check_out_time'] != null
+                ? DateTime.parse(attendance['check_out_time'])
+                : null;
+
+        setState(() {
+          _isCheckedIn = checkOutTime == null && checkInTime != null;
+          _checkInTime = checkInTime;
+          _checkOutTime = checkOutTime;
+        });
+      } else {
+        // No attendance record found
+        setState(() {
+          _isCheckedIn = false;
+          _checkInTime = null;
+          _checkOutTime = null;
+        });
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error fetching attendance: ${e.toString()}')),
       );
     }
   }
