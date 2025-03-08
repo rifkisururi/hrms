@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'attendance_history_page.dart';
+import 'package:intl/intl.dart';
 import '../config.dart';
 
 class AttendancePage extends StatefulWidget {
@@ -241,58 +242,68 @@ class _AttendancePageState extends State<AttendancePage> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                labelText: 'Location',
-                border: OutlineInputBorder(),
-              ),
-              readOnly: true,
-              controller: TextEditingController(text: _location),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _getImage,
-              child: const Text('Upload Selfie'),
-            ),
-            if (_image != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Image.file(_image!, height: 100),
-              ),
-            const SizedBox(height: 16),
-            Row(
+        child: Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Is Backup:'),
-                const SizedBox(width: 16),
-                Checkbox(
-                  value: _isBackup,
-                  onChanged: (value) {
-                    setState(() {
-                      _isBackup = value!;
-                    });
-                  },
+                Text(
+                  DateFormat('dd MMM yyyy HH:mm:ss').format(DateTime.now()),
+                  style: const TextStyle(fontSize: 16),
                 ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  decoration: const InputDecoration(
+                    labelText: 'Location',
+                    border: OutlineInputBorder(),
+                  ),
+                  readOnly: true,
+                  controller: TextEditingController(text: _location),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _getImage,
+                  child: const Text('Upload Selfie'),
+                ),
+                if (_image != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Image.file(_image!, height: 100),
+                  ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    const Text('Is Backup:'),
+                    const SizedBox(width: 16),
+                    Checkbox(
+                      value: _isBackup,
+                      onChanged: (value) {
+                        setState(() {
+                          _isBackup = value!;
+                        });
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _isCheckedIn ? null : _checkIn,
+                  child: const Text('Masuk'),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: !_isCheckedIn ? null : _checkOut,
+                  child: const Text('Pulang'),
+                ),
+                // const SizedBox(height: 16),
+                // if (_checkInTime != null)
+                //   Text('Check In Time: ${_checkInTime.toString()}'),
+                // if (_checkOutTime != null)
+                //   Text('Check Out Time: ${_checkOutTime.toString()}'),
               ],
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _isCheckedIn ? null : _checkIn,
-              child: const Text('Check In'),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: !_isCheckedIn ? null : _checkOut,
-              child: const Text('Check Out'),
-            ),
-            // const SizedBox(height: 16),
-            // if (_checkInTime != null)
-            //   Text('Check In Time: ${_checkInTime.toString()}'),
-            // if (_checkOutTime != null)
-            //   Text('Check Out Time: ${_checkOutTime.toString()}'),
-          ],
+          ),
         ),
       ),
     );
