@@ -3,6 +3,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
+import 'attendance_history_page.dart';
+import '../config.dart';
 
 class AttendancePage extends StatefulWidget {
   const AttendancePage({Key? key}) : super(key: key);
@@ -220,7 +222,23 @@ class _AttendancePageState extends State<AttendancePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Attendance')),
+      appBar: AppBar(
+        title: const Text('Attendance', style: TextStyle(color: Colors.white)),
+        backgroundColor: Color(AppColors.primaryColor),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AttendanceHistoryPage(),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -269,11 +287,11 @@ class _AttendancePageState extends State<AttendancePage> {
               onPressed: !_isCheckedIn ? null : _checkOut,
               child: const Text('Check Out'),
             ),
-            const SizedBox(height: 16),
-            if (_checkInTime != null)
-              Text('Check In Time: ${_checkInTime.toString()}'),
-            if (_checkOutTime != null)
-              Text('Check Out Time: ${_checkOutTime.toString()}'),
+            // const SizedBox(height: 16),
+            // if (_checkInTime != null)
+            //   Text('Check In Time: ${_checkInTime.toString()}'),
+            // if (_checkOutTime != null)
+            //   Text('Check Out Time: ${_checkOutTime.toString()}'),
           ],
         ),
       ),
